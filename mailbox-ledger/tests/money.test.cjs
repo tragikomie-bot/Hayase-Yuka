@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const M=require('../app/src/main/assets/money.js');
+assert.equal(M.convert('800','0.048523'),'38.82');
+assert.equal(M.convert('100','7.13555'),'713.56');
+assert.equal(M.convert('0.10','1'),'0.10');
+assert.equal(M.convert('0.01','0.5'),'0.01');
+assert.equal(M.convert('100','0.137986'),'13.80');
+assert.equal(M.convert('1','150.625'),'150.63');
+assert.equal(M.convert('1','0.000000000000000001'),'0.00');
+assert.equal(M.fixed(M.cents('0.10')+M.cents('0.20')),'0.30');
+assert.equal(M.cents('9999999999999999.99'),999999999999999999n);
+assert.equal(M.fixed(-123n),'-1.23');
+for(const v of ['NaN','Infinity','-1','1e3','0','', '<script>'])assert.throws(()=>M.convert(v,'1'));
+for(const v of ['0','-1','NaN','1e-3','0.1234567890123456789'])assert.throws(()=>M.convert('1',v));
+assert.throws(()=>M.convert('1.001','1'));
+assert.throws(()=>M.convert('999999999999','999999999999'));
+console.log('PASS: 28 decimal arithmetic, rounding, large total, invalid input checks');
