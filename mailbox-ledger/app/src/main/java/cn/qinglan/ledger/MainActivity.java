@@ -29,6 +29,11 @@ public class MainActivity extends Activity {
     SharedPreferences prefs;
     ExecutorService pool = Executors.newSingleThreadExecutor();
     String exportData;
+    final Handler refreshHandler=new Handler(Looper.getMainLooper());
+    final Runnable refreshTick=new Runnable(){public void run(){checkSchedules();refreshHandler.postDelayed(this,60000);}};
+    void checkSchedules(){ScheduleEngine.EXECUTOR.execute(()->{ScheduleEngine.run(MainActivity.this,new java.util.concurrent.atomic.AtomicBoolean(false),false);ScheduleEngine.arm(MainActivity.this);runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())web.evaluateJavascript("window.onLedgerUpdated && window.onLedgerUpdated()",null);});});}
+    @Override protected void onResume(){super.onResume();refreshHandler.removeCallbacks(refreshTick);refreshHandler.post(refreshTick);}
+    @Override protected void onPause(){refreshHandler.removeCallbacks(refreshTick);super.onPause();}
     static final int LIMIT = 12 * 1024 * 1024;
     public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -73,14 +78,15 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(), "Android");
         web.loadUrl("https://app.qinglan.local/index.html");
     }
-    boolean isNight() { return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES; }
+    boolean isSystemNight() { return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES; }
+    boolean isNight(){String mode=prefs.getString("theme","system");return mode.equals("dark")||(mode.equals("system")&&isSystemNight());}
     int dialogTheme() { return isNight() ? android.R.style.Theme_Material_Dialog_Alert : android.R.style.Theme_Material_Light_Dialog_Alert; }
     void applySystemTheme() {
         boolean dark=isNight(); int bg=dark?0xff090d14:0xfff2f6ff;
         container.setBackgroundColor(bg); web.setBackgroundColor(bg);
         getWindow().setStatusBarColor(bg); getWindow().setNavigationBarColor(dark?0xff141a25:0xffffffff);
         getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        web.evaluateJavascript("window.setSystemTheme && window.setSystemTheme("+dark+")",null);
+        web.evaluateJavascript("window.syncTheme && window.syncTheme()",null);
     }
     @Override public void onConfigurationChanged(Configuration config) { super.onConfigurationChanged(config); applySystemTheme(); }
     WebResourceResponse empty() { return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0])); }
@@ -110,33 +116,21 @@ public class MainActivity extends Activity {
         c.init(Cipher.DECRYPT_MODE, secret(), new GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)));
         return new String(c.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), "UTF-8");
     }
-    JSONObject http(String endpoint, Map<String,String> params) throws Exception {
-        StringBuilder form = new StringBuilder(); params.put("appkey", loadKey());
-        for (Map.Entry<String,String> e : params.entrySet()) { if (form.length()>0) form.append('&'); form.append(URLEncoder.encode(e.getKey(), "UTF-8")).append('=').append(URLEncoder.encode(e.getValue(), "UTF-8")); }
-        HttpURLConnection c = (HttpURLConnection) new URL("https://api.jisuapi.com/exchange/" + endpoint).openConnection();
-        c.setConnectTimeout(15000); c.setReadTimeout(20000); c.setInstanceFollowRedirects(false);
-        c.setRequestMethod("POST"); c.setDoOutput(true); c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        try {
-            try (OutputStream out = c.getOutputStream()) { out.write(form.toString().getBytes("UTF-8")); }
-            int status = c.getResponseCode(); if (status != 200) throw new Exception("汇率服务返回 HTTP " + status);
-            JSONObject json = new JSONObject(readAll(c.getInputStream()));
-            if (json.optInt("status", -1) != 0) throw new Exception("汇率接口：" + json.optString("msg", "查询失败，请检查AppKey及额度"));
-            return json.getJSONObject("result");
-        } finally { c.disconnect(); }
-    }
     public class Bridge {
-        @JavascriptInterface public String systemTheme() { return isNight()?"dark":"light"; }
-        @JavascriptInterface public synchronized String load() {
-            try { return readAll(ledger.openRead()); } catch (FileNotFoundException e) { return ""; } catch (Exception e) { return "LOAD_ERROR"; }
+        @JavascriptInterface public String systemTheme() { return isSystemNight()?"dark":"light"; }
+        @JavascriptInterface public String load() {
+            try { JSONObject d=LedgerStore.read(MainActivity.this);return d==null?"":d.toString(); } catch(Exception e){return "LOAD_ERROR";}
         }
-        @JavascriptInterface public synchronized String save(String value) {
-            FileOutputStream stream = null;
-            try {
-                JSONObject root = new JSONObject(value);
-                byte[] bytes=value.getBytes("UTF-8");
-                if (root.getInt("version") != 1 || root.getJSONArray("books").length() == 0 || bytes.length > LIMIT) throw new Exception();
-                stream = ledger.startWrite(); stream.write(bytes); ledger.finishWrite(stream); return "ok";
-            } catch (Exception e) { if (stream != null) ledger.failWrite(stream); return "账本保存失败，请检查手机剩余空间"; }
+        @JavascriptInterface public String save(String value) {String result=LedgerStore.saveUI(MainActivity.this,value,false);if("ok".equals(result))ScheduleEngine.arm(MainActivity.this);return result;}
+        @JavascriptInterface public String restore(String value) {String result=LedgerStore.saveUI(MainActivity.this,value,true);if("ok".equals(result))ScheduleEngine.arm(MainActivity.this);return result;}
+        @JavascriptInterface public void runSchedules(String id,boolean force) {
+            ScheduleEngine.EXECUTOR.execute(()->{JSONObject result=ScheduleEngine.run(MainActivity.this,new java.util.concurrent.atomic.AtomicBoolean(false),force);ScheduleEngine.arm(MainActivity.this);reply(id,result);});
+        }
+        @JavascriptInterface public String themeMode(){return prefs.getString("theme","system");}
+        @JavascriptInterface public String setThemeMode(String mode){
+            if(!mode.equals("light")&&!mode.equals("dark")&&!mode.equals("system"))return "主题无效";
+            if(!prefs.edit().putString("theme",mode).commit())return "主题保存失败";
+            runOnUiThread(()->applySystemTheme());return "ok";
         }
         @JavascriptInterface public String settings() {
             try { return new JSONObject().put("key", loadKey()).put("dailyCache", prefs.getBoolean("dailyCache", true)).toString(); }
@@ -156,35 +150,7 @@ public class MainActivity extends Activity {
                 String id = "";
                 try {
                     JSONObject q = new JSONObject(raw); id = q.getString("id");
-                    String from = q.getString("from"), to = q.getString("to"), date = q.getString("date");
-                    if (!from.matches("[A-Z]{3}") || !to.matches("[A-Z]{3}") || !date.matches("\\d{4}-\\d{2}-\\d{2}")) throw new Exception("币种或日期无效");
-                    if (date.compareTo(today()) > 0) throw new Exception("未来日期尚无汇率，请手动填写");
-                    if (from.equals(to)) { reply(id,new JSONObject().put("rate","1").put("updated",date).put("source","同币种").put("cached",false)); return; }
-                    String cacheId = from + "_" + to + "_" + date;
-                    SharedPreferences cache = getSharedPreferences("rates",MODE_PRIVATE);
-                    if (prefs.getBoolean("dailyCache",true) && !q.optBoolean("force",false)) {
-                        String saved = cache.getString(cacheId, "");
-                        if (!saved.isEmpty()) { JSONObject hit = new JSONObject(saved); hit.put("cached",true); reply(id,hit); return; }
-                    }
-                    if (loadKey().isEmpty()) throw new Exception("请先在设置中填写极速数据 AppKey，或手动输入汇率");
-                    Map<String,String> p = new LinkedHashMap<>(); p.put("from",from); p.put("to",to);
-                    JSONObject r;
-                    if (date.equals(today())) { p.put("amount","1"); r = http("convert",p);
-                        if (!from.equals(r.optString("from")) || !to.equals(r.optString("to"))) throw new Exception("接口返回的币种不匹配");
-                    } else {
-                        p.put("startdate",date); p.put("enddate",date); JSONObject all = http("history",p);
-                        if (!from.equals(all.optString("from")) || !to.equals(all.optString("to"))) throw new Exception("接口返回的币种不匹配");
-                        JSONArray list = all.optJSONArray("list"); r = null;
-                        if (list != null) for (int i=0;i<list.length();i++) { JSONObject row=list.getJSONObject(i); if (date.equals(row.optString("date"))) r=row; }
-                        if (r == null) throw new Exception("该日暂无历史汇率，请手动填写实际汇率");
-                    }
-                    String rate = r.getString("rate");
-                    if (!rate.matches("[0-9]{1,12}(\\.[0-9]{1,18})?") || new BigDecimal(rate).signum() <= 0) throw new Exception("接口返回了无效汇率");
-                    String updated = r.optString("updatetime",r.optString("date",""));
-                    if (updated.length()<10) throw new Exception("接口未返回汇率日期，请稍后重试");
-                    JSONObject result = new JSONObject().put("rate",rate).put("updated",updated).put("source","极速数据").put("cached",false);
-                    if (updated.substring(0,10).equals(date)) cache.edit().putString(cacheId,result.toString()).apply();
-                    reply(id,result);
+                    reply(id,new FxClient(MainActivity.this).quote(q));
                 } catch (Exception e) { String msg=e.getMessage(); if (e instanceof IOException) msg="网络连接失败，请检查网络后重试，也可手动填写汇率"; reply(id,error(msg == null ? "汇率查询失败" : msg)); }
             });
         }
@@ -211,5 +177,5 @@ public class MainActivity extends Activity {
         } catch (Exception e) { Toast.makeText(this,"文件读写失败，请重试",Toast.LENGTH_LONG).show(); }
     }
     @Override public void onBackPressed() { web.evaluateJavascript("window.handleBack()",v -> { if ("false".equals(v)) new AlertDialog.Builder(this,dialogTheme()).setMessage("退出邮箱记账？已保存的账目会保留。").setPositiveButton("退出",(d,w)->finish()).setNegativeButton("取消",null).show(); }); }
-    protected void onDestroy() { pool.shutdownNow(); web.removeJavascriptInterface("Android"); web.destroy(); super.onDestroy(); }
+    protected void onDestroy() { refreshHandler.removeCallbacks(refreshTick); pool.shutdownNow(); web.removeJavascriptInterface("Android"); web.destroy(); super.onDestroy(); }
 }

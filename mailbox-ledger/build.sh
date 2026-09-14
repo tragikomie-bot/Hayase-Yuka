@@ -28,7 +28,7 @@ if [ ! -f signing/qinglan-release.p12 ]; then
   keytool -genkeypair -keystore signing/qinglan-release.p12 -storetype PKCS12 -storepass:file signing/password.txt -keypass:file signing/password.txt -alias qinglan -keyalg RSA -keysize 3072 -validity 10000 -dname 'CN=Qinglan Ledger, OU=Personal App, O=Qinglan, C=CN'
 fi
 BT="$QINGLAN_SDK/android-15"
-java -jar "$QINGLAN_ECJ" -8 -nowarn -classpath "$QINGLAN_SDK/android-35/android.jar" -d build/classes app/src/main/java/cn/qinglan/ledger/MainActivity.java
+java -jar "$QINGLAN_ECJ" -8 -nowarn -classpath "$QINGLAN_SDK/android-35/android.jar" -d build/classes app/src/main/java/cn/qinglan/ledger/*.java
 "$BT/d8" --lib "$QINGLAN_SDK/android-35/android.jar" --min-api 26 --output build/dex build/classes/cn/qinglan/ledger/*.class
 "$BT/aapt2" compile --dir app/src/main/res -o build/compiled
 "$BT/aapt2" link -o build/base.apk --manifest app/src/main/AndroidManifest.xml -I "$QINGLAN_SDK/android-35/android.jar" -A app/src/main/assets --min-sdk-version 26 --target-sdk-version 35 build/compiled/*.flat
@@ -37,6 +37,6 @@ from zipfile import ZipFile,ZIP_DEFLATED
 with ZipFile('build/base.apk','a') as z:z.write('build/dex/classes.dex','classes.dex',compress_type=ZIP_DEFLATED)
 PY
 "$BT/zipalign" -f -p 4 build/base.apk build/aligned.apk
-"$BT/apksigner" sign --ks signing/qinglan-release.p12 --ks-key-alias qinglan --ks-pass file:signing/password.txt --out output/mailbox-ledger-1.0.0.apk build/aligned.apk
-"$BT/apksigner" verify --verbose output/mailbox-ledger-1.0.0.apk
-"$BT/zipalign" -c 4 output/mailbox-ledger-1.0.0.apk
+"$BT/apksigner" sign --ks signing/qinglan-release.p12 --ks-key-alias qinglan --ks-pass file:signing/password.txt --out output/mailbox-ledger-1.1.0.apk build/aligned.apk
+"$BT/apksigner" verify --verbose output/mailbox-ledger-1.1.0.apk
+"$BT/zipalign" -c 4 output/mailbox-ledger-1.1.0.apk

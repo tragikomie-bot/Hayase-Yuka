@@ -22,17 +22,17 @@
 
 进入仓库的 Releases，新建一个 Release：
 
-- 标签（Tag）：`v1.0.0`。标签不能为空；如果尚不存在，创建这个新标签。
-- 标题：`邮箱记账 v1.0.0`。
-- 说明：复制 `docs/RELEASE-v1.0.0.md` 的内容。
-- 附件：上传单独提供的 `mailbox-ledger-1.0.0.apk`。
+- 标签（Tag）：`v1.1.0`。标签不能为空；如果尚不存在，创建这个新标签。
+- 标题：`邮箱记账 v1.1.0`。
+- 说明：复制 `docs/RELEASE-v1.1.0.md` 的内容。
+- 附件：上传单独提供的 `mailbox-ledger-1.1.0.apk`。
 
 确认后发布。其他人便可从 Releases 下载 APK；GitHub 会根据该标签自动提供源码压缩包。
 
 ## 文件区分
 
 - `mailbox-ledger-github.zip`：此次专门整理的公开源码包，解压后上传仓库。
-- `mailbox-ledger-1.0.0.apk`：已签名安装包，上传到 Release 附件。
+- `mailbox-ledger-1.1.0.apk`：已签名安装包，上传到 Release 附件。
 - 之前的 `mailbox-ledger-source.zip`：私人源码备份，含签名材料，不要公开上传。
 
 ## 构建说明

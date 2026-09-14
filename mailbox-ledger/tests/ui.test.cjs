@@ -13,7 +13,7 @@ await context.addInitScript(()=>{
  window.Android={load:()=>localStorage.getItem('db')||'',save:s=>{localStorage.setItem('db',s);return'ok';},settings:()=>'{"key":"test-key","dailyCache":true}',saveSettings:()=> 'ok',rate:s=>{const q=JSON.parse(s);window.rateCalls.push(q);setTimeout(()=>window.nativeReply(q.id,window.rateMode==='error'?{error:'网络连接失败'}:{rate:q.from==='JPY'?'0.048523':q.to==='USD'?'0.14':'7.12345',updated:(window.rateMode==='stale'?'2020-01-01':q.date)+' 10:00:00',source:'测试数据',cached:false}),40);},exportBackup:()=>{},importBackup:()=>{},openProvider:()=>{}};
 });
 const page=await context.newPage();let errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
-await page.goto(base);
+await page.goto(base);await page.locator('#release-notes [data-action=close]').click();
 const getDB=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('db')));
 assert.equal(await page.locator('.day').count(),new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate());
 await page.screenshot({path:process.env.SHOT_DIR+'/01-empty.png',fullPage:true});

@@ -6,14 +6,27 @@
 - 中文界面截图目视检查通过。
 - Android API 35资源编译和Java/D8编译通过。
 - APK zipalign对齐检查通过；APK Signature Scheme v2/v3验证通过。
-- APK仅请求INTERNET权限；minSdk 26，targetSdk 35。
+- APK请求INTERNET和RECEIVE_BOOT_COMPLETED权限；minSdk 26，targetSdk 35。
 - 未进行实体手机或安卓模拟器安装验证；用户需安装后检查本机系统WebView兼容性。
 - 未测试国内运营商线路与有效AppKey的真实端到端汇率查询。
 
 ## 邮箱外观更新验证
 
 - 浅色/深色切换、原生主题回调、保持表单草稿、保持已存记录、主色值#4987EE、图片资源显示与320px窄屏检查通过。
-- 已保留原包名、原签名与versionCode=1/versionName=1.0.0；应用名称为邮箱记账。
+- 已保留原包名、原签名与versionCode=3/versionName=1.1.0；应用名称为邮箱记账。
 - 桌面图标使用用户原图；仅重新编码为PNG供Android资源编译，解码后像素保持一致。
 - 已检查白天/夜间界面截图，已通过APK v2/v3签名和zipalign校验。
 - 未在实体安卓手机上验证系统主题事件和覆盖安装。
+
+## 计算器与定时记账更新验证
+
+- calculator-recurrence.test.cjs：精确四则运算、括号、优先级、最终舍入、除零和非法表达式、每周/月底及闰年边界通过。
+- ScheduleTest.java（主机JVM运行生产Java方法）：汇率日期检查、换算舍入、同币种/固定汇率、待重试游标、幂等提交、旧规则版本和暂停保护、月底与每周日期通过。
+- update-ui.test.cjs：计算器填金额、日历直接合计、规则新建/修改/暂停/恢复/跳过、从记账生成规则、三种主题及重载持久化、320px布局通过。
+- 旧版金额、UI和主题测试继续通过。
+- Java编译、资源打包、v2/v3签名与zipalign通过，保持原签名。
+- 原生JobScheduler唤醒、真实关机重启、Doze、省电策略、覆盖安装尚未在安卓设备实测。主机JVM测试验证业务方法，不等同于系统后台集成验证。
+
+## 1.1.0 更新通告
+
+首次展示、关闭后不重复弹出、设置重新查看、深色模式与返回键关闭验证通过。versionName=1.1.0，versionCode=3，原签名不变；编译、签名和对齐验证通过。未进行实体手机测试。
