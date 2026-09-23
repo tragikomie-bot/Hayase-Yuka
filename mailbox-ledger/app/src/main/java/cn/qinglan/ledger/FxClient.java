@@ -38,16 +38,38 @@ final class FxClient {
             return json.getJSONObject("result");
         } finally { c.disconnect(); }
     }
+    static JSONObject parseForeign(JSONObject r,String from,String to,String requested)throws Exception {
+        if(!from.equalsIgnoreCase(r.getString("base"))||!to.equalsIgnoreCase(r.getString("quote")))throw new Exception("接口返回的币种不匹配");
+        String date=r.getString("date");LocalDate actual=LocalDate.parse(date);
+        if(actual.isAfter(LocalDate.parse(requested)))throw new Exception("返回汇率日期晚于记账日期");
+        String rate=new BigDecimal(r.get("rate").toString()).stripTrailingZeros().toPlainString();
+        if(!rate.matches("[0-9]{1,12}(\\.[0-9]{1,18})?")||new BigDecimal(rate).signum()<=0)throw new Exception("接口返回了无效汇率");
+        return new JSONObject().put("rate",rate).put("updated",date).put("source","Frankfurter").put("cached",false);
+    }
+    JSONObject foreignQuote(String from,String to,String date)throws Exception {
+        String url="https://api.frankfurter.dev/v2/rate/"+from.toLowerCase(Locale.ROOT)+"/"+to.toLowerCase(Locale.ROOT);
+        if(!date.equals(today()))url+="?date="+date;
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setConnectTimeout(15000);c.setReadTimeout(20000);c.setInstanceFollowRedirects(false);c.setRequestProperty("Accept","application/json");
+        try{int status=c.getResponseCode();if(status!=200)throw new Exception("国外汇率服务返回 HTTP "+status+"，请检查币种或切换国内接口");return parseForeign(new JSONObject(readAll(c.getInputStream())),from,to,date);}finally{c.disconnect();}
+    }
     JSONObject quote(JSONObject q) throws Exception {
                     String from = q.getString("from"), to = q.getString("to"), date = q.getString("date");
                     if (!from.matches("[A-Z]{3}") || !to.matches("[A-Z]{3}") || !date.matches("\\d{4}-\\d{2}-\\d{2}")) throw new Exception("币种或日期无效");
                     if (date.compareTo(today()) > 0) throw new Exception("未来日期尚无汇率，请手动填写");
                     if (from.equals(to)) { return new JSONObject().put("rate","1").put("updated",date).put("source","同币种").put("cached",false); }
-                    String cacheId = from + "_" + to + "_" + date;
+                    LocalDate.parse(date);
+                    String provider=prefs.getString("provider","jisu");
+                    String cacheId = provider + "_" + from + "_" + to + "_" + date;
                     SharedPreferences cache = context.getSharedPreferences("rates",Context.MODE_PRIVATE);
                     if (prefs.getBoolean("dailyCache",true) && !q.optBoolean("force",false)) {
                         String saved = cache.getString(cacheId, "");
                         if (!saved.isEmpty()) { JSONObject hit = new JSONObject(saved); hit.put("cached",true); return hit; }
+                    }
+                    if(provider.equals("frankfurter")) {
+                        JSONObject result=foreignQuote(from,to,date);
+                        if(result.getString("updated").equals(date))cache.edit().putString(cacheId,result.toString()).apply();
+                        return result;
                     }
                     if (loadKey().isEmpty()) throw new Exception("请先在设置中填写极速数据 AppKey，或手动输入汇率");
                     Map<String,String> p = new LinkedHashMap<>(); p.put("from",from); p.put("to",to);

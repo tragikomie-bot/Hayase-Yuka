@@ -37,6 +37,6 @@ from zipfile import ZipFile,ZIP_DEFLATED
 with ZipFile('build/base.apk','a') as z:z.write('build/dex/classes.dex','classes.dex',compress_type=ZIP_DEFLATED)
 PY
 "$BT/zipalign" -f -p 4 build/base.apk build/aligned.apk
-"$BT/apksigner" sign --ks signing/qinglan-release.p12 --ks-key-alias qinglan --ks-pass file:signing/password.txt --out output/mailbox-ledger-1.1.0.apk build/aligned.apk
-"$BT/apksigner" verify --verbose output/mailbox-ledger-1.1.0.apk
-"$BT/zipalign" -c 4 output/mailbox-ledger-1.1.0.apk
+"$BT/apksigner" sign --ks signing/qinglan-release.p12 --ks-key-alias qinglan --ks-pass file:signing/password.txt --out output/mailbox-ledger-1.3.0.apk build/aligned.apk
+"$BT/apksigner" verify --verbose output/mailbox-ledger-1.3.0.apk
+"$BT/zipalign" -c 4 output/mailbox-ledger-1.3.0.apk

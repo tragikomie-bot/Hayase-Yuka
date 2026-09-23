@@ -126,6 +126,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void runSchedules(String id,boolean force) {
             ScheduleEngine.EXECUTOR.execute(()->{JSONObject result=ScheduleEngine.run(MainActivity.this,new java.util.concurrent.atomic.AtomicBoolean(false),force);ScheduleEngine.arm(MainActivity.this);reply(id,result);});
         }
+        @JavascriptInterface public synchronized boolean consumeReleaseNotice() {
+            if(prefs.getBoolean("releaseNoticeShown",false))return false;
+            // Persist before display, including when the process is killed without dismissing.
+            return prefs.edit().putBoolean("releaseNoticeShown",true).commit();
+        }
         @JavascriptInterface public String themeMode(){return prefs.getString("theme","system");}
         @JavascriptInterface public String setThemeMode(String mode){
             if(!mode.equals("light")&&!mode.equals("dark")&&!mode.equals("system"))return "主题无效";
@@ -133,15 +138,16 @@ public class MainActivity extends Activity {
             runOnUiThread(()->applySystemTheme());return "ok";
         }
         @JavascriptInterface public String settings() {
-            try { return new JSONObject().put("key", loadKey()).put("dailyCache", prefs.getBoolean("dailyCache", true)).toString(); }
+            try { return new JSONObject().put("key", loadKey()).put("provider",prefs.getString("provider","jisu")).put("dailyCache", prefs.getBoolean("dailyCache", true)).toString(); }
             catch (Exception e) { return "{\"key\":\"\",\"dailyCache\":true,\"warning\":\"密钥读取失败，请重新填写AppKey\"}"; }
         }
         @JavascriptInterface public String saveSettings(String json) {
             try {
                 JSONObject o = new JSONObject(json); String key = o.getString("key").trim();
+                String provider=o.optString("provider","jisu");if(!provider.equals("jisu")&&!provider.equals("frankfurter"))return "汇率来源无效";
                 String saved = "";
                 if (!key.isEmpty()) { Cipher c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE, secret()); saved = Base64.encodeToString(c.getIV(), Base64.NO_WRAP) + ":" + Base64.encodeToString(c.doFinal(key.getBytes("UTF-8")), Base64.NO_WRAP); }
-                boolean ok = prefs.edit().putString("key", saved).putBoolean("dailyCache", o.optBoolean("dailyCache", true)).commit();
+                boolean ok = prefs.edit().putString("provider",provider).putString("key", saved).putBoolean("dailyCache", o.optBoolean("dailyCache", true)).commit();
                 return ok ? "ok" : "设置保存失败";
             } catch (Exception e) { return "设置保存失败，请重试"; }
         }
