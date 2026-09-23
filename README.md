@@ -1,9 +1,9 @@
-[README.md](https://github.com/user-attachments/files/32328468/README.md)
+[README.md](https://github.com/user-attachments/files/32547505/README.md)
 <div align="center">
 <img src="app/src/main/assets/app-icon.png" width="112" alt="邮箱记账图标">
 <h1>邮箱记账</h1>
 <p>把日子记清楚，把生活过轻盈。</p>
-<p>Android · 版本 1.2.0 · 多账本 · 多币种 · 日历记账</p>
+<p>Android · 版本 1.3.0 · 多账本 · 多币种 · 日历记账</p>
 </div>
 
 邮箱记账是一款轻量的安卓本地记账应用。以当月日历为首页，清楚区分已记账和未记账的日期，用蓝色与随系统切换的白色/黑色界面记录每天的收支。
@@ -23,11 +23,11 @@
 
 ## 下载与安装
 
-在本仓库的 **Releases** 页面下载 `mailbox-ledger-1.2.0.apk`，通过安卓系统安装器安装。
+在本仓库的 **Releases** 页面下载 `mailbox-ledger-1.3.0.apk`，通过安卓系统安装器安装。
 
 - Android 8.0 及以上，需较新的 Android System WebView。
 - 同一签名的版本可覆盖安装；卸载会删除本机账目，卸载前请导出备份。
-- 当前应用版本为 `1.2.0`，包名保持 `cn.qinglan.ledger`。
+- 当前应用版本为 `1.3.0`，包名保持 `cn.qinglan.ledger`。
 
 ## 配置自动汇率
 
@@ -54,7 +54,7 @@ bash build.sh
 脚本会下载 Android API 35、Build Tools 35 和 Eclipse ECJ，使用 ECJ、D8、aapt2、zipalign、apksigner 编译并签名，无需 Gradle。产物位于：
 
 ```text
-output/mailbox-ledger-1.2.0.apk
+output/mailbox-ledger-1.3.0.apk
 ```
 
 此公开源码包**不含原始签名私钥和密码**。首次自行构建会生成本机签名，自行签名的 APK 无法覆盖安装作者签名的 APK。发布后续覆盖更新时，应在本机沿用最初的签名材料，且保持这些文件不进入公开仓库。
@@ -76,11 +76,19 @@ docs/                     发布说明和技术文档
 
 已通过金额算法、模拟接口交互、主题切换与草稿保留测试，以及 APK 编译、签名和对齐校验。尚未进行实体安卓手机安装验证，也未使用真实用户 AppKey 完成国内网络下的端到端汇率测试。详见 [验证记录](TEST-RESULTS.md)。
 
-- [发布说明](docs/RELEASE-v1.2.0.md)
+- [发布说明](docs/RELEASE-v1.3.0.md)
 - [GitHub 上传步骤](docs/GITHUB-UPLOAD.md)
 - [详细技术说明](docs/TECHNICAL.md)
 
-内部versionCode为4，显示版本仍为1.2.0。定时记账受安卓省电影响，不能保证准点；外币汇率失败保留待处理并重试；备份恢复后规则默认暂停。
+内部versionCode为5，显示版本仍为1.3.0。定时记账受安卓省电影响，不能保证准点；外币汇率失败保留待处理并重试；备份恢复后规则默认暂停。
 
 
-本次新增国外汇率来源，并将公告显示标记存入安卓本机设置，在首次展示前保存。详见 RELEASE-v1.2.0.md。
+本次新增国外汇率来源，并将公告显示标记存入安卓本机设置，在首次展示前保存。详见 RELEASE-v1.3.0.md。
+
+
+## 笔笔攒
+设置 → 支付宝余额宝笔笔攒：选择比例或固定金额、转出账本、转入账本后保存。在记支出页面勾选使用。转账不重复计入消费，不会实际扣款。详见 RELEASE-v1.3.0.md。
+
+### 同版本账本转账修订
+
+直接选择已有账本，两边日历与结余包含转账，消费收支不重复计入。外币账本支持查询或手动转账汇率并冻结保存。旧版独立账户记录保留；先配置账本规则，再编辑旧消费并主动选择“改用设置中的最新规则”可完成关联。版本保持1.3.0/5。
