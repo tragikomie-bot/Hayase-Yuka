@@ -30,5 +30,5 @@ function attachSavingEntry(existing,getQuote){
   if(host.children.length){host.insertAdjacentHTML('beforeend','<button id="saving-book-query" class="link" type="button">查询转账账本汇率</button>');$('saving-book-query').onclick=()=>queryBookRates(true);}
  }
  async function queryBookRates(force=false){if(!toggle.checked||rule?.scope!=='books')return;const seq=++fxGeneration,date=$('entry-date').value;if(!validDate(date))return;for(const side of ['from','to']){const b=db.books.find(v=>v.id===rule[side]);if(!b||b.currency==='CNY'||(!force&&bookQuotes[side]))continue;try{const q=await askRate('CNY',b.currency,date,force);if(token!==formToken||seq!==fxGeneration)return;if(q.updated.slice(0,10)!==date&&!window.confirm('转账汇率日期为 '+q.updated+'，与记账日期不同，是否采用？'))continue;bookQuotes[side]={...q,currency:b.currency};renderBookRates();update();}catch(e){if(token===formToken&&seq===fxGeneration)$('saving-rate-info-'+side).textContent=e.message+'；可手动填写';}}}
- renderBookRates();update();return {transfer,update};
+ renderBookRates();update();return {transfer,update,ruleForSchedule:()=>{if(!toggle.checked||draft.type!=='expense')return null;if(rule?.scope!=='books')throw Error('请先设置账本笔笔攒规则');Savings.validateRule(rule,db.books);return JSON.parse(JSON.stringify(rule));}};
 }

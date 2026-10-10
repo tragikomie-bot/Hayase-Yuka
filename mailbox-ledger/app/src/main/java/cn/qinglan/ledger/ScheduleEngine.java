@@ -14,6 +14,7 @@ final class ScheduleEngine {
     static final int PERIODIC=7021, NEXT=7022;
     interface RateProvider {JSONObject get(String from,String to,String date)throws Exception;}
     static void validateRule(JSONObject r,JSONArray books)throws Exception {
+        SavingsEngine.validate(r,books);
         r.getBoolean("enabled");if(r.getString("generation").isEmpty())throw new Exception("规则版本无效");
         if(!r.getString("id").matches("[a-zA-Z0-9_-]{1,80}"))throw new Exception("规则编号无效");
         if(LedgerStore.find(books,r.getString("bookId"))==null)throw new Exception("账本不存在");
@@ -75,17 +76,17 @@ final class ScheduleEngine {
             for(int i=0;i<rules.length()&&processed<40&&!stopped.get();i++){
                 String ruleId=rules.getJSONObject(i).getString("id");
                 while(processed<40&&!stopped.get()&&System.currentTimeMillis()-started<90000){
-                    JSONObject snapshot,book;String date,generation;
+                    JSONObject snapshot,book;JSONArray snapshotBooks;String date,generation;
                     synchronized(LedgerStore.LOCK){
                         JSONObject d=LedgerStore.read(c),r=LedgerStore.find(d.getJSONArray("schedules"),ruleId);
                         if(r==null||!r.optBoolean("enabled"))break;
                         if(!force&&r.optLong("retryAfter",0)>System.currentTimeMillis())break;
                         if(ScheduleDates.dueMillis(r.getString("nextDate"),r.getString("time"))>System.currentTimeMillis())break;
-                        snapshot=new JSONObject(r.toString());date=r.getString("nextDate");generation=r.getString("generation");
+                        snapshotBooks=new JSONArray(d.getJSONArray("books").toString());snapshot=new JSONObject(r.toString());date=r.getString("nextDate");generation=r.getString("generation");
                         book=LedgerStore.find(d.getJSONArray("books"),r.getString("bookId"));if(book==null)break;
                     }
                     JSONObject newEntry=null;String failure="";
-                    try{validateRule(snapshot,initial.getJSONArray("books"));newEntry=entry(snapshot,book,date,(from,to,day)->fx.quote(new JSONObject().put("from",from).put("to",to).put("date",day).put("force",false)));}
+                    try{validateRule(snapshot,snapshotBooks);newEntry=SavingsEngine.build(snapshot,snapshotBooks,date,(from,to,day)->fx.quote(new JSONObject().put("from",from).put("to",to).put("date",day).put("force",false)));}
                     catch(Exception e){failure=e instanceof java.io.IOException?"网络不可用，等待重试":e.getMessage();if(failure==null)failure="自动记账失败";}
                     processed++;
                     if(stopped.get())break;

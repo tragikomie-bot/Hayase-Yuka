@@ -33,6 +33,6 @@
  }
  function totals(entries,id){let incoming=0n,outgoing=0n;for(const e of entries){const t=e.saving;if(!t)continue;if(t.from===id)outgoing+=M.cents(t.amount);if(t.to===id)incoming+=M.cents(t.amount);}return {incoming:M.fixed(incoming),outgoing:M.fixed(outgoing),net:M.fixed(incoming-outgoing)};}
  function rows(d,id){return d.entries.filter(e=>e.saving?.rule.scope==='books'&&(e.saving.from===id||e.saving.to===id)).map(e=>{const t=e.saving,incoming=t.to===id,q=t[incoming?'toQuote':'fromQuote'];return {id:e.id,bookId:id,transfer:true,type:incoming?'income':'expense',category:incoming?'笔笔攒转入':'笔笔攒转出',date:e.date,created:e.created,note:e.note,currency:q.currency,amount:q.amount,converted:q.amount};});}
- function used(d,id){return d.savingsRule?.scope==='books'&&[d.savingsRule.from,d.savingsRule.to].includes(id)||d.entries.some(e=>e.saving?.rule.scope==='books'&&[e.saving.from,e.saving.to].includes(id));}
+ function used(d,id){return (d.schedules||[]).some(r=>r.savingRule?.scope==='books'&&[r.savingRule.from,r.savingRule.to].includes(id))||d.savingsRule?.scope==='books'&&[d.savingsRule.from,d.savingsRule.to].includes(id)||d.entries.some(e=>e.saving?.rule.scope==='books'&&[e.saving.from,e.saving.to].includes(id));}
  root.Savings={rows,used,rates,calculate,positive,migrate,validate,validateRule,totals};if(typeof module!=='undefined')module.exports=root.Savings;
 })(typeof window!=='undefined'?window:globalThis);
