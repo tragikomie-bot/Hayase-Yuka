@@ -1,0 +1,28 @@
+# Local SDK and build products
+.toolchain/
+build/
+output/
+node_modules/
+qa/
+playwright-report/
+test-results/
+# Private signing material and credentials
+signing/
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+password.txt
+.env
+.env.*
+local.properties
+# Installers belong in GitHub Releases
+*.apk
+*.idsig
+# Local editor files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
